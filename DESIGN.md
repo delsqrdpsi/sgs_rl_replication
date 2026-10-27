@@ -33,8 +33,8 @@ Sources, in priority order:
 | Physics step | 5 ms (200 Hz) | SGS |
 | Policy rate | 10 Hz (20 physics steps per action) | SGS |
 | Episode length | 16 s = 160 policy steps | OmniReset `episode_length_s` |
-| Rod | Cylinder, 16 mm diameter, 50 mm long | SGS (diameter); length *assumption* |
-| Hole | 16.5 mm bore (0.5 mm diametral clearance), 25 mm deep, in a block fixed to the table | Clearance per user; depth *assumption*; board fixed, as in SGS's real setup |
+| Rod | Cylinder, 16 mm diameter, 75 mm long, 41 g (aluminium) | SGS (diameter); length and mass *assumption*: 50 mm stays above the block when seated, room for the fingers |
+| Hole | 16.5 mm bore (0.5 mm diametral clearance), 25 mm deep, through a block fixed to the table; the bore is a 16-sided prism (MuJoCo has no concave primitives) | Clearance per user; depth *assumption*; board fixed, as in SGS's real setup |
 | Gripper pad friction | μ = 2, max combine (MuJoCo's default combine rule) | SGS |
 | Robot gravity | Compensated (robot bodies gravity-free; objects keep gravity) | OmniReset assets (`disable_gravity=True`) |
 
@@ -42,11 +42,14 @@ Sources, in priority order:
 
 Action: 7-D = 3 position increments, 3 axis-angle increments, 1 binary gripper command (close if > 0). SGS.
 
-Relative OSC on the `wrist_3_link` pose, following OmniReset's `RelCartesianOSCAction`:
+Relative OSC on the `wrist_3_link` pose, following OmniReset's `RelCartesianOSCAction`, run as a Warp kernel
+between `step1` and `step2` of every physics step:
 
 - Each policy step: target = current pose + action × scale, scale = (0.02, 0.02, 0.02 m, 0.02, 0.02, 0.2 rad).
 - Each physics step: τ = Jᵀ(Kp·e − Kd·J q̇), Kp = (200, 200, 200, 3, 3, 3), Kd = 2·√Kp·ζ with
   ζ = (3, 3, 3, 1, 1, 1); torques clamped to (150, 150, 150, 28, 28, 28) N·m.
+- Because the target is re-based on the current pose every step, a held rod's weight makes a zero action sag
+  about 0.4 mm per step; the policy has to hold the rod up itself. OmniReset's controller behaves the same way.
 
 ## Reward, success and failure (SGS)
 
@@ -55,7 +58,9 @@ r = 100·S − F − 1e-5·C(‖a‖²) − 1e-4·C(‖a − a_prev‖²) − 1e
 - **Success S:** the rod's seated reference point is within **2.5 mm** of the hole's seated point and
   |roll| + |pitch| of the rod relative to the hole is below **0.025 rad** (yaw ignored).
   Thresholds: OmniReset `PegHole/metadata.yaml`.
-- **Failure F (−1):** any arm joint speed above 2× its limit, or the rod outside the workspace bounds. SGS.
+- **Failure F (−1):** any arm joint speed above 2× its limit (UR5e: 180°/s), or the rod's centre outside the
+  workspace box x ∈ [−0.6, 0.35], y ∈ [0.15, 0.95], z ∈ [−0.02, 0.5] m (box *assumption*). SGS.
+  Non-finite physics state also counts as failure.
 - **Episode end:** success, failure, or timeout. Ending on success is an *assumption*; the outcome recorded for
   the sampler is whether the episode succeeded.
 
@@ -68,8 +73,9 @@ r = 100·S − F − 1e-5·C(‖a‖²) − 1e-4·C(‖a − a_prev‖²) − 1e
 | Previous action | 7 | SGS |
 | Point cloud in the gripper frame: gripper, rod, board | N × 3 | SGS |
 
-Point cloud: fixed points sampled once on each body's surface, moved with the body's pose each step, expressed
-in the gripper frame. N = 32 per body (96 points) is an *assumption*. 1 mm Gaussian noise per step on the
+Point cloud: fixed points on each body, moved with the body's pose each step, expressed in the gripper (pinch)
+frame: the 8 corners of each finger's two pad boxes (32), rings on the rod's ends and side (32), and rings on the
+bore rim, bore wall and block top (32). 96 points total; the choice of points is an *assumption*. 1 mm Gaussian noise per step on the
 points (SGS, rod-in-hole).
 
 ## Reset bank (SGS)
@@ -82,8 +88,20 @@ points (SGS, rod-in-hole).
 3. **Reaching:** rod anywhere in the workspace; gripper aligned to the rod's grasp frame by IK; random aperture.
    The grasp is not guaranteed.
 
-Every candidate is collision-checked and settled before it enters the bank. Ranges SGS does not give
-(workspace box, heights, aperture range) are *assumptions*, listed in the generator config.
+Every candidate is collision-checked (no penetration over 0.5 mm, except pads on a grasped rod), then the fingers
+move to their commanded opening for 0.3 s (a grasped rod held in place), then the rod is released for 0.3 s with the
+arm held still. Accepted configurations must be settled; grasped rods must touch both pads and move under 5 mm.
+
+Ranges SGS does not give are *assumptions* (constants at the top of `src/sgs_rod/generate.py`):
+
+| Family | Rod | Gripper |
+|---|---|---|
+| Near-Goal | upright in the bore, ±0.2 mm, random yaw, depth fraction U[0, 1.1] | top-down grasp, pinch 20 mm below the rod top, random yaw; closed (50%) or open with command U[0, 100] (50%) |
+| Stable Grasp | tip 1-10 cm above the entrance, ±5 cm sideways, tilt up to 0.2 rad | same grasp, closed |
+| Reaching | standing upright on the table, x ∈ [−0.35, 0.10], y ∈ [0.38, 0.70], 5+ cm from the bore | grasp pose raised 2-15 cm, ±5 cm sideways, tilted up to 0.2 rad; command U[0, 255] |
+
+The stored gripper command holds the stored finger opening until the policy's first action. Generated on the
+CPU in about 45 s (`scripts/make_bank.py`); acceptance is 96-100% per family.
 
 Evaluation: a separate set of Reaching configurations generated with a different seed, never seen by the
 sampler (SGS reports success from Reaching starts).

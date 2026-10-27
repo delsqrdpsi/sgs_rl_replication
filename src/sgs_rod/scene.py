@@ -14,8 +14,8 @@ TIMESTEP = 0.005  # SGS: 200 Hz physics
 TABLE_TOP = 0.0  # robot base and table surface share z = 0
 
 ROD_RADIUS = 0.008  # SGS: 16 mm rod
-ROD_HALF_LENGTH = 0.025  # assumption: 50 mm rod
-ROD_MASS = 0.027  # assumption: aluminium, pi * r^2 * L * 2700 kg/m^3
+ROD_HALF_LENGTH = 0.0375  # assumption: 75 mm rod, so 50 mm stands proud when seated, room for the fingers
+ROD_MASS = 0.041  # assumption: aluminium, pi * r^2 * L * 2700 kg/m^3
 
 BORE_RADIUS = 0.00825  # 16.5 mm bore: 0.5 mm diametral clearance
 HOLE_DEPTH = 0.025  # assumption

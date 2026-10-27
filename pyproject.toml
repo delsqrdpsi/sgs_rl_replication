@@ -9,10 +9,17 @@ dependencies = [
     "numpy",
     "torch",
     "rsl-rl-lib==5.5.1",
+    "tensorboard",
+    "wandb",
+    "scipy>=1.17.1",
 ]
 
 [dependency-groups]
-dev = ["pytest"]
+dev = [
+    "imageio>=2.38.1",
+    "pytest",
+    "scipy>=1.17.1",
+]
 
 [build-system]
 requires = ["hatchling"]
