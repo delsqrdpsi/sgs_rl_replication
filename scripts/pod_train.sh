@@ -27,7 +27,12 @@ rm -rf runs/gpu-check
 name="$SAMPLER-$ENVS-s$SEED-$(date +%Y%m%d-%H%M%S)"
 mkdir -p runs
 echo "== Training run $name (W&B offline; sync later with: uv run wandb sync runs/$name/wandb/offline-run-*)"
-WANDB_MODE=offline nohup uv run --no-sync python scripts/train.py --sampler "$SAMPLER" --num-envs "$ENVS" \
-  --iterations "$ITERS" --max-hours "$HOURS" --seed "$SEED" --run-dir "runs/$name" --wandb-project "$PROJECT" \
-  > "runs/$name.log" 2>&1 &
-echo "started: tail -f runs/$name.log"
+# On a RunPod pod, stop the pod when training ends (compute billing stops; /workspace is kept).
+stop_pod=""
+if [ -n "${RUNPOD_POD_ID:-}" ] && [ "${STOP_WHEN_DONE:-1}" = 1 ] && command -v runpodctl >/dev/null; then
+  stop_pod="runpodctl stop pod $RUNPOD_POD_ID"
+fi
+nohup bash -c "WANDB_MODE=offline uv run --no-sync python scripts/train.py --sampler '$SAMPLER' --num-envs '$ENVS' \
+  --iterations '$ITERS' --max-hours '$HOURS' --seed '$SEED' --run-dir 'runs/$name' --wandb-project '$PROJECT'; \
+  echo \"== training exited with status \$?\"; $stop_pod" > "runs/$name.log" 2>&1 &
+echo "started: tail -f runs/$name.log${stop_pod:+ (the pod stops itself when training ends)}"
