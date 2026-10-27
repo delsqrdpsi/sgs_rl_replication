@@ -3,6 +3,8 @@
 SGS start-state sampling ([arXiv 2610.12465](https://arxiv.org/html/2610.12465v1)) on UR5e + Robotiq 2F-85
 rod-in-hole, in MuJoCo Warp. Design, sources and every assumption: [DESIGN.md](DESIGN.md).
 
+![Four start configurations per family: Near-Goal, Stable Grasp, Reaching](docs/bank_samples.png)
+
 ## Setup
 
 ```sh
@@ -33,7 +35,7 @@ Robot models: MuJoCo Menagerie commit in `assets/MENAGERIE_COMMIT`, licenses kep
 On a CUDA machine (e.g. a RunPod RTX 5090), from the repo root:
 
 ```sh
-SAMPLER=sgs HOURS=8 bash scripts/pod_train.sh
+SAMPLER=sgs HOURS=6 bash scripts/pod_train.sh
 ```
 
 It runs a 2-iteration check at full scale, then trains in the background. Logs go to `runs/<name>.log`,

@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # Train on a CUDA machine (e.g. a RunPod RTX 5090). Run from the repo root:
-#   SAMPLER=sgs HOURS=8 bash scripts/pod_train.sh
+#   SAMPLER=sgs HOURS=6 bash scripts/pod_train.sh
 # Checks the GPU path with a 2-iteration run first, then starts the real run in the background.
 set -euo pipefail
 
 SAMPLER=${SAMPLER:-sgs}  # sgs | uniform
 ENVS=${ENVS:-10000}
 ITERS=${ITERS:-100000}
-HOURS=${HOURS:-8}
+HOURS=${HOURS:-6}
 SEED=${SEED:-0}
-PROJECT=${PROJECT:-sgs-rod}
+PROJECT=${PROJECT:-sgs_rl_replication}
 export PYTHONPATH=src
 
 if ! command -v uv >/dev/null; then
