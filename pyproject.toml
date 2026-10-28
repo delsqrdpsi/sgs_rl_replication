@@ -17,8 +17,11 @@ dependencies = [
 [dependency-groups]
 dev = [
     "imageio>=2.38.1",
+    "matplotlib>=3.11.2",
     "pytest",
     "scipy>=1.17.1",
+    "trimesh>=5.2.0",
+    "viser>=1.1.1",
 ]
 
 [build-system]
