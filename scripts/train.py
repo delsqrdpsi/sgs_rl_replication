@@ -26,7 +26,9 @@ def ppo_cfg(args):
             "hidden_dims": [512, 256, 128, 64],
             "activation": "elu",
             "obs_normalization": True,
-            "distribution_cfg": {"class_name": "GaussianDistribution", "init_std": 1.0},
+            # OmniReset's std bounds and log parameterization; state-independent std (plain Gaussian).
+            "distribution_cfg": {"class_name": "GaussianDistribution", "init_std": 1.0, "std_type": "log",
+                                 "std_range": [0.001, 2.0]},
         },
         "critic": {
             "class_name": "MLPModel",

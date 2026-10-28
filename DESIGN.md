@@ -127,7 +127,7 @@ Baseline: `--sampler uniform` draws every reset uniformly from the same bank.
 | Clip / entropy / value coef | 0.2 / 0.006 / 1.0, clipped value loss |
 | Max grad norm | 1.0 |
 | Advantage normalization | Over the whole rollout |
-| Initial action std | 1.0 |
+| Action std | Initial 1.0, log-parameterized, clamped to [0.001, 2.0]; state-independent (OmniReset predicts it per state) |
 
 ## Not reproduced
 
